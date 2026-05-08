@@ -3,7 +3,6 @@ from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from fastapi import Form
-import random
 from prediction import calculate_difficulty, calculate_topic
 from generator import question_generator
 
@@ -250,7 +249,7 @@ async def show_generator_form(request: Request, subject: str = None):
     return templates.TemplateResponse(request, "generator.html", {
         "subjects": subjects,
         "selected_subject": subject,
-        "questions": None
+        "questions": None,
     })
 
 
@@ -269,10 +268,10 @@ async def generator(
     return templates.TemplateResponse(request, "generator.html", {
         "marks": marks,
         "subject": subject,
-        "subjects": subjects,                                        
-        "topics": topics,                                            
-        "selected_subject": subject,                                                                         
-        "questions": questions                                         
+        "subjects": subjects,
+        "selected_subject": subject,
+        "questions": questions,
+        "topics": topics                           
     })
 
 @app.get("/get_topics")
