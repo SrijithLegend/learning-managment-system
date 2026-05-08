@@ -1,0 +1,12 @@
+# Ignore the virtual environment
+.venv/
+venv/
+env/
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+
+# Ignore Excel/Data files (if you don't want them on GitHub)
+data.xlsx
+*.xlsx

@@ -1,0 +1,114 @@
+{% extends "layout.html" %}
+
+{% block head %}
+<title>Classification Analysis</title>
+<style>
+    :root {
+        --primary: #2563eb;
+        --success: #166534;
+        --bg-card: #ffffff;
+        --border-color: #e2e8f0;
+    }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    
+    /* Stats Row */
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: var(--bg-card);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .stat-label { font-size: 0.85rem; color: #64748b; text-transform: uppercase; font-weight: 600; }
+    .stat-value { font-size: 2rem; font-weight: 800; color: var(--primary); margin-top: 0.5rem; }
+    .percent { font-size: 1rem; font-weight: 400; color: #94a3b8; }
+
+    /* Table Styling */
+    .table-responsive {
+        background: var(--bg-card);
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .q-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .q-table th { background: #f8fafc; padding: 16px; text-align: left; color: #64748b; border-bottom: 2px solid var(--border-color); }
+    .q-table td { padding: 16px; border-bottom: 1px solid var(--border-color); vertical-align: top; }
+    .q-table tr:hover { background-color: #f1f5f9; }
+
+    .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-top: 4px;
+    }
+    .badge-actual { background: #e2e8f0; color: #475569; }
+    .badge-predicted { background: #dcfce7; color: var(--success); border: 1px solid #bbf7d0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Model Performance Dashboard</h1>
+
+    <!-- Stats Overview -->
+    <div class="stats-container">
+        <div class="stat-card">
+            <div class="stat-label">Total Sample Size</div>
+            <div class="stat-value">{{ total_questions }} <span class="percent">Rows</span></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Difficulty Accuracy</div>
+            <div class="stat-value">{{ difficulty_accuracy }}<span class="percent">%</span></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Topic Accuracy</div>
+            <div class="stat-value">{{ topic_accuracy }}<span class="percent">%</span></div>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-responsive">
+        <table class="q-table">
+            <thead>
+                <tr>
+                    <th style="width: 10%;">ID</th>
+                    <th style="width: 45%;">Question Text</th>
+                    <th>Topic (Actual vs Pred)</th>
+                    <th>Difficulty (Actual vs Pred)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for q in data %}
+                <tr>
+                    <td style="font-weight: bold; color: var(--primary);">
+                        #{{ q.question_id[4:] if q.question_id|length > 4 else q.question_id }}
+                    </td>
+                    <td>{{ q.question_text }}</td>
+                    <td>
+                        <div style="font-weight: 500;">{{ q.topic }}</div>
+                        <div style="color: var(--success); font-size: 0.85rem;">→ {{ q.predicted_topic }}</div>
+                    </td>
+                    <td>
+                        <span class="badge badge-actual">{{ q.difficulty }}</span><br>
+                        <span class="badge badge-predicted">{{ q.predicted_difficulty }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

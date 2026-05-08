@@ -1,0 +1,71 @@
+{% extends "layout.html" %}
+
+{% block head %}
+<title>Add Question</title>
+<style>
+    form { background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 1.5rem; max-width: 560px; }
+    .field { margin-bottom: 1rem; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.3rem; }
+    input, select, textarea {
+        width: 100%; padding: 0.5rem 0.6rem; border: 1px solid #ccc;
+        border-radius: 4px; font-size: 0.9rem; font-family: sans-serif;
+    }
+    input:focus, select:focus, textarea:focus { outline: 2px solid #2563eb; border-color: transparent; }
+    textarea { resize: vertical; min-height: 80px; }
+    button { padding: 0.55rem 1.25rem; background: #2563eb; color: #fff; border: none; border-radius: 4px; font-size: 0.9rem; cursor: pointer; }
+    button:hover { background: #1d4ed8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Add Question</h1>
+
+<form method="POST" action="/add_question">
+    <div class="field">
+        <label for="question_id">Question ID</label>
+        <input type="number" id="question_id" name="question_id" required>
+    </div>
+    <div class="field">
+        <label for="question_text">Question Text</label>
+        <textarea id="question_text" name="question_text" required></textarea>
+    </div>
+    <div class="field">
+        <label for="subject">Subject</label>
+        <input type="text" id="subject" name="subject" required>
+    </div>
+    <div class="field">
+        <label for="topic">Topic</label>
+        <input type="text" id="topic" name="topic" required>
+    </div>
+    <div class="field">
+        <label for="question_type">Question Type</label>
+        <input type="text" id="question_type" name="question_type" placeholder="MCQ / True-False / etc." required>
+    </div>
+    <div class="field">
+        <label for="difficulty">Difficulty</label>
+        <select id="difficulty" name="difficulty" required>
+            <option value="">Select difficulty</option>
+            <option value="Easy">Easy</option>
+            <option value="Medium">Medium</option>
+            <option value="Hard">Hard</option>
+        </select>
+    </div>
+    <div class="field">
+        <label for="marks">Marks</label>
+        <input type="number" id="marks" name="marks" required>
+    </div>
+    <div class="field">
+        <label for="options">Options (for MCQ)</label>
+        <input type="text" id="options" name="options" placeholder="A) ... B) ... C) ... D) ...">
+    </div>
+    <div class="field">
+        <label for="correct_answer">Correct Answer</label>
+        <input type="text" id="correct_answer" name="correct_answer" required>
+    </div>
+    <div class="field">
+        <label for="explanation">Explanation</label>
+        <textarea id="explanation" name="explanation"></textarea>
+    </div>
+    <button type="submit">Add Question</button>
+</form>
+{% endblock %}

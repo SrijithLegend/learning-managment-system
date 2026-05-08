@@ -1,0 +1,194 @@
+{% extends "layout.html" %}
+
+{% block head %}
+<title>Question Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono&display=swap" rel="stylesheet">
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body { font-family: 'DM Sans', sans-serif; background: #f5f5f0; }
+
+    h1 { font-size: 1.4rem; font-weight: 600; color: #111; margin-bottom: 1.5rem; letter-spacing: -0.02em; }
+
+    form {
+        background: #fff;
+        border: 1px solid #e5e5e5;
+        border-radius: 8px;
+        padding: 1.5rem;
+        max-width: 520px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .field { margin-bottom: 1.1rem; }
+    .field:last-of-type { margin-bottom: 1.4rem; }
+
+    label {
+        display: block;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #555;
+        margin-bottom: 0.35rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    input, select {
+        width: 100%;
+        padding: 0.55rem 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-family: 'DM Sans', sans-serif;
+        background: #fafafa;
+        color: #111;
+        transition: border-color 0.15s, box-shadow 0.15s;
+        appearance: none;
+    }
+
+    input:focus, select:focus {
+        outline: none;
+        border-color: #2563eb;
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
+    }
+
+    select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.75rem center;
+        padding-right: 2rem;
+    }
+
+    button {
+        padding: 0.6rem 1.4rem;
+        background: #2563eb;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        font-family: 'DM Sans', sans-serif;
+        cursor: pointer;
+        transition: background 0.15s, transform 0.1s;
+    }
+
+    button:hover { background: #1d4ed8; }
+    button:active { transform: scale(0.98); }
+
+    /* Results */
+    .results { max-width: 520px; }
+
+    .results h2 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #111;
+        margin-bottom: 1rem;
+        letter-spacing: -0.01em;
+    }
+
+    .question-card {
+        background: #fff;
+        border: 1px solid #e5e5e5;
+        border-radius: 8px;
+        padding: 1rem 1.1rem;
+        margin-bottom: 0.75rem;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+
+    .question-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 0.6rem;
+    }
+
+    .question-text {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #111;
+        line-height: 1.5;
+    }
+
+    .marks-badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: #eff6ff;
+        color: #2563eb;
+        padding: 0.2rem 0.55rem;
+        border-radius: 20px;
+        white-space: nowrap;
+        font-family: 'DM Mono', monospace;
+    }
+
+    .question-meta {
+        font-size: 0.82rem;
+        color: #666;
+        margin-bottom: 0.3rem;
+    }
+
+    .answer {
+        font-size: 0.82rem;
+        color: #16a34a;
+        font-weight: 500;
+    }
+
+    .empty-msg {
+        color: #888;
+        font-size: 0.9rem;
+        padding: 1rem 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Question Generator</h1>
+
+<form method="POST" action="/generator">
+    <div class="field">
+        <label for="marks">Total Marks</label>
+        <input type="number" id="marks" name="marks" value="{{ marks or '' }}" placeholder="e.g. 20" required>
+    </div>
+    <div class="field">
+        <label for="subject">Subject</label>
+        <select id="subject" name="subject" required>
+            <option value="">Select a subject</option>
+            {% for sub in subjects %}
+                <option value="{{ sub }}" {{ 'selected' if sub == selected_subject else '' }}>{{ sub }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit">Generate Questions</button>
+</form>
+
+{% if questions %}
+    <div class="results">
+        <h2>Generated Questions</h2>
+        {% for q in questions %}
+            <div class="question-card">
+                <div class="question-header">
+                    <span class="question-text">Q{{ loop.index }}. {{ q.question_text }}</span>
+                    <span class="marks-badge">{{ q.marks }}m</span>
+                </div>
+                <p class="question-meta">{{ q.options }}</p>
+                <p class="answer">✓ {{ q.correct_answer }}</p>
+            </div>
+        {% endfor %}
+    </div>
+{% elif questions is not none and questions|length == 0 %}
+    <p class="empty-msg">No questions found for the selected criteria.</p>
+{% endif %}
+
+<script>
+    document.getElementById("subject").addEventListener("change", function () {
+        const subject = this.value;
+        if (!subject) return;
+        fetch(`/get_topics?subject=${encodeURIComponent(subject)}`)
+            .then(res => res.json())
+            .then(data => {
+                // handle topics if needed
+            });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "layout.html" %}
+
+{% block head %}
+<title>Summary</title>
+<style>
+    .stats { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .stat { background: #fff; border: 1px solid #ddd; padding: 1rem 1.5rem; border-radius: 4px; min-width: 140px; }
+    .stat-label { font-size: 0.8rem; color: #666; text-transform: uppercase; }
+    .stat-value { font-size: 1.75rem; font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; background: #fff; }
+    th, td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+    th { background: #f0f0f0; font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Summary</h1>
+
+<div class="stats">
+    <div class="stat">
+        <div class="stat-label">Total Questions</div>
+        <div class="stat-value">{{ data.total_questions }}</div>
+    </div>
+    <div class="stat">
+        <div class="stat-label">Total Marks</div>
+        <div class="stat-value">{{ data.total_marks }}</div>
+    </div>
+    <div class="stat">
+        <div class="stat-label">Duplicates</div>
+        <div class="stat-value">{{ data.duplicate_questions }}</div>
+    </div>
+</div>
+
+<h2>By Subject</h2>
+<table>
+    <tr><th>Subject</th><th>Count</th></tr>
+    {% for key, value in data.questions_by_subject.items() %}
+    <tr><td>{{ key }}</td><td>{{ value }}</td></tr>
+    {% endfor %}
+</table>
+
+<h2>By Difficulty</h2>
+<table>
+    <tr><th>Difficulty</th><th>Count</th></tr>
+    {% for key, value in data.questions_by_difficulty.items() %}
+    <tr><td>{{ key }}</td><td>{{ value }}</td></tr>
+    {% endfor %}
+</table>
+
+<h2>By Topic</h2>
+<table>
+    <tr><th>Topic</th><th>Count</th></tr>
+    {% for key, value in data.questions_by_topic.items() %}
+    <tr><td>{{ key }}</td><td>{{ value }}</td></tr>
+    {% endfor %}
+</table>
+
+<h2>By Type</h2>
+<table>
+    <tr><th>Type</th><th>Count</th></tr>
+    {% for key, value in data.questions_by_type.items() %}
+    <tr><td>{{ key }}</td><td>{{ value }}</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+
+{% block head %}
+<title>All Questions</title>
+<style>
+    .q-list { list-style: none; padding: 0; }
+    .q-item { background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; font-size: 0.95rem; }
+    .q-id { color: #555; margin-right: 10px; font-weight: bold; }
+    .empty { color: #888; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>All Questions</h1>
+
+{% if data %}
+    <ul class="q-list">
+        {% for q in data %}
+            <li class="q-item">
+                <span class="q-id">{{ q.question_id[4:] if q.question_id|length > 4 else q.question_id }}</span> 
+                {{ q.question_text }}
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p class="empty">No questions available.</p>
+{% endif %}
+{% endblock %}

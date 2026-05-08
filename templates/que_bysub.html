@@ -1,0 +1,58 @@
+{% extends "layout.html" %}
+
+{% block head %}
+<title>{{ subject }} Questions</title>
+<style>
+    .q-list { list-style: none; }
+    .q-item { background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; }
+    .q-text { font-size: 0.95rem; margin-bottom: 0.35rem; }
+    .meta { font-size: 0.8rem; color: #666; }
+    .empty { color: #888; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>{{ subject }}</h1>
+
+{% if questions %}
+    <ul class="q-list">
+        {% for q in questions %}
+            <li class="q-item">
+                <div class="q-text">{{ q.question_text }}</div>
+                <div class="meta">{{ q.topic }} &mdash; {{ q.difficulty }} &mdash; {{ q.marks }} mark(s)</div>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p class="empty">No questions found for this subject.</p>
+{% endif %}
+{% endblock %}
+{% extends "layout.html" %}
+
+{% block head %}
+<title>{{ subject }} Questions</title>
+<style>
+    .q-list { list-style: none; }
+    .q-item { background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; }
+    .q-text { font-size: 0.95rem; margin-bottom: 0.35rem; }
+    .meta { font-size: 0.8rem; color: #666; }
+    .empty { color: #888; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>{{ subject }}</h1>
+
+{% if questions %}
+    <ul class="q-list">
+        {% for q in questions %}
+            <li class="q-item">
+                <div class="q-text">{{ q.question_text }}</div>
+                <div class="meta">{{ q.topic }} &mdash; {{ q.difficulty }} &mdash; {{ q.marks }} mark(s)</div>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p class="empty">No questions found for this subject.</p>
+{% endif %}
+{% endblock %}
