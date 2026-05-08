@@ -68,22 +68,6 @@ The analytics module performs dataset-level inspection and summarization using P
 - Missing value analysis
 - Duplicate question detection
 
-### Sample Analytics Output
-
-```json
-{
-  "total_questions": 522,
-  "questions_by_subject": {
-    "Python": 62,
-    "MongoDB": 31
-  },
-  "questions_by_difficulty": {
-    "Easy": 201,
-    "Medium": 233,
-    "Hard": 88
-  },
-  "duplicate_questions": 0
-}
 Machine Learning Classification System
 
 The application contains a lightweight NLP classification pipeline for predicting:
