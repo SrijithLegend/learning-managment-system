@@ -210,16 +210,16 @@
     </form>
 
     {% if questions %}
-    <div class="summary">
-        <h2>Summary</h2>
-        <p>Total Questions: <span>{{ questions|length }}</span></p>
-        <p>Total Marks: <span>{{ questions|sum(attribute='marks') }}</span></p>
-        <p>Topics: <span>{{ topics|join(', ') }}</span></p>
-        <p>Easy: <span>{{ questions|selectattr('difficulty', 'equalto', 'Easy')|list|length }}</span> &nbsp;
-           Medium: <span>{{ questions|selectattr('difficulty', 'equalto', 'Medium')|list|length }}</span> &nbsp;
-           Hard: <span>{{ questions|selectattr('difficulty', 'equalto', 'Hard')|list|length }}</span>
-        </p>
-    </div>
+<div class="summary">
+    <h2>Summary</h2>
+    <p>Total Questions: <span>{{ questions|length }}</span></p>
+    <p>Total Marks: <span>{{ questions|sum(attribute='marks') }}</span></p>
+    <p>Topics: <span>{{ topics|join(', ') }}</span></p>
+    <p>Easy: <span>{{ easy }} ({{ easy_pct }}%)</span> &nbsp;
+       Medium: <span>{{ medium }} ({{ medium_pct }}%)</span> &nbsp;
+       Hard: <span>{{ hard }} ({{ hard_pct }}%)</span>
+    </p>
+</div>
     {% endif %}
 </div>
 

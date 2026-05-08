@@ -263,7 +263,15 @@ async def generator(
     subjects = df["subject"].unique().tolist()                            
     topics = df[df["subject"] == subject]["topic"].unique().tolist()   
 
-    questions = question_generator(marks, subject)            
+    questions = question_generator(marks, subject)         
+    total_q = len(questions)
+    easy = sum(1 for q in questions if q["difficulty"] == "Easy")
+    medium = sum(1 for q in questions if q["difficulty"] == "Medium")
+    hard = sum(1 for q in questions if q["difficulty"] == "Hard")
+
+    easy_pct = round(easy / total_q * 100) if total_q > 0 else 0
+    medium_pct = round(medium / total_q * 100) if total_q > 0 else 0
+    hard_pct = round(hard / total_q * 100) if total_q > 0 else 0   
 
     return templates.TemplateResponse(request, "generator.html", {
         "marks": marks,
@@ -271,7 +279,13 @@ async def generator(
         "subjects": subjects,
         "selected_subject": subject,
         "questions": questions,
-        "topics": topics                           
+        "topics": topics,
+        "easy": easy,
+        "medium": medium,
+        "hard": hard,
+        "easy_pct": easy_pct,
+        "medium_pct": medium_pct,
+        "hard_pct": hard_pct
     })
 
 @app.get("/get_topics")
