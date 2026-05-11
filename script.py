@@ -257,22 +257,26 @@ async def show_generator_form(request: Request, subject: str = None):
 async def generator(
     request: Request,
     marks: int = Form(...),
-    subject: str = Form(...)
+    subject: str = Form(...),
+    easy_pct: int = Form(...),
+    medium_pct: int = Form(...),
+    hard_pct: int = Form(...)
 ):
     df = load_data()
     subjects = df["subject"].unique().tolist()                            
-    topics = df[df["subject"] == subject]["topic"].unique().tolist()   
+    topics = df[df["subject"] == subject]["topic"].unique().tolist()     
+    
+    if easy_pct + medium_pct + hard_pct == 100:
 
-    questions = question_generator(marks, subject)         
-    total_q = len(questions)
-    easy = sum(1 for q in questions if q["difficulty"] == "Easy")
-    medium = sum(1 for q in questions if q["difficulty"] == "Medium")
-    hard = sum(1 for q in questions if q["difficulty"] == "Hard")
+        easy = round(marks * easy_pct / 100)
+        medium = round(marks * medium_pct / 100)
+        hard = marks - easy - medium
 
-    easy_pct = round(easy / total_q * 100) if total_q > 0 else 0
-    medium_pct = round(medium / total_q * 100) if total_q > 0 else 0
-    hard_pct = round(hard / total_q * 100) if total_q > 0 else 0   
-
+    else:
+        return 'Invalid percentage values. Please ensure they sum to 100.'
+    
+    questions = question_generator(marks, subject, easy , medium, hard)       
+    
     return templates.TemplateResponse(request, "generator.html", {
         "marks": marks,
         "subject": subject,

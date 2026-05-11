@@ -1,7 +1,7 @@
 import pandas as pd
 import random
 
-def question_generator(marks, subject):
+def question_generator(marks, subject, easy , medium, hard):
 
     df = pd.read_excel("data.xlsx")
     df.columns = df.columns.str.strip()

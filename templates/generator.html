@@ -206,6 +206,18 @@
                 {% endfor %}
             </select>
         </div>
+        <div class="field">
+            <label for="easy_pct">Easy Questions (%)</label>
+            <input type="number" id="easy_pct" name="easy_pct" value="{{ easy_pct or '' }}" placeholder="e.g. 30 %" required>
+        </div>
+        <div class="field">
+            <label for="medium_pct">Medium Questions (%)</label>
+            <input type="number" id="medium_pct" name="medium_pct" value="{{ medium_pct or '' }}" placeholder="e.g. 50 %" required>
+        </div>
+        <div class="field">
+            <label for="hard_pct">Hard Questions (%)</label>
+            <input type="number" id="hard_pct" name="hard_pct" value="{{ hard_pct or '' }}" placeholder="e.g. 20 %" required>
+        </div>
         <button type="submit">Generate Questions</button>
     </form>
 
