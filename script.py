@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from fastapi import Form
 from prediction import calculate_difficulty, calculate_topic
 from generator import question_generator
+from datetime import datetime
 
 
 class Question(BaseModel):
@@ -24,7 +25,7 @@ templates = Jinja2Templates(directory="templates")
 
 
 def load_data():
-    df = pd.read_excel("data.xlsx")
+    df = pd.read_excel("question_bank_questions.xlsx")
     df.columns = df.columns.str.strip()
     return df
 
@@ -35,7 +36,7 @@ def analyze_questions():
     
     if duplicate_count > 0:
         df = df.drop_duplicates(subset=["question_text"], keep='first')
-        df.to_excel("data.xlsx", index=False)
+        df.to_excel("question_bank_questions.xlsx", index=False)
 
     return {
         "total_questions": len(df),
@@ -109,7 +110,7 @@ async def add_question(
     }
 
     df = pd.concat([df, pd.DataFrame([new_question])], ignore_index=True)
-    df.to_excel("data.xlsx", index=False)
+    df.to_excel("question_bank_questions.xlsx", index=False)
 
     return {"message": "Question added successfully"}
 
@@ -153,7 +154,7 @@ async def update_question(
     df.at[idx, "correct_answer"] = correct_answer
     df.at[idx, "explanation"] = explanation
 
-    df.to_excel("data.xlsx", index=False)
+    df.to_excel("question_bank_questions.xlsx", index=False)
 
     return {"message": "Question updated successfully"}
 
@@ -175,7 +176,7 @@ async def delete_question(
         return {"error": "Question ID not found."}
 
     df = df[df["question_id"] != question_id]
-    df.to_excel("data.xlsx", index=False)
+    df.to_excel("question_bank_questions.xlsx", index=False)
 
     return {"message": "Question deleted successfully"}
 

@@ -3,7 +3,7 @@ import random
 
 def question_generator(marks, subject, easy , medium, hard):
 
-    df = pd.read_excel("data.xlsx")
+    df = pd.read_excel("question_bank_questions.xlsx")
     df.columns = df.columns.str.strip()
     df["marks"] = pd.to_numeric(df["marks"], errors="coerce").fillna(0).astype(int)
 

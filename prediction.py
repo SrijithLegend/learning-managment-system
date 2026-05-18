@@ -6,7 +6,7 @@ from sklearn.svm import LinearSVC
 from sklearn.metrics import accuracy_score
 
 
-df = pd.read_excel("data.xlsx")
+df = pd.read_excel("question_bank_questions.xlsx")
 df.columns = df.columns.str.strip()
 
 X = df["question_text"].astype(str) 
