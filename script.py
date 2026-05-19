@@ -60,6 +60,7 @@ async def get_summary(request: Request):
 @app.get("/questions", include_in_schema=True)
 async def get_questions(request: Request):
 
+    
     df = load_data()
     selected_df = df[['question_id', 'question_text']]
     questions = selected_df.to_dict(orient="records")
