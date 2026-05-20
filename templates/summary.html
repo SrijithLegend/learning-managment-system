@@ -36,11 +36,12 @@
     <tr><th>Topic</th><th>Count</th></tr>
     {% for item in data.questions_by_topic %}
     <tr>
-        <td>{{ item[0] }}</td>
+        <td>{{ item.question_bank_question_topic }}</td>
         <td>{{ item.question_count }}</td>
     </tr>
     {% endfor %}
 </table>
+
 
 <h2>By Difficulty</h2>
 <table>

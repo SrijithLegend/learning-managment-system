@@ -1,56 +1,66 @@
-import pandas as pd
 import random
+from sqlalchemy import create_engine, text
 
-def question_generator(marks, subject, easy , medium, hard):
+DATABASE_URL = "mysql+pymysql://db_local_user:yD94Q34eI@192.168.1.88:3306/lms_demo_db"
+engine = create_engine(DATABASE_URL)
 
-    df = pd.read_excel("question_bank_questions.xlsx")
-    df.columns = df.columns.str.strip()
-    df["marks"] = pd.to_numeric(df["marks"], errors="coerce").fillna(0).astype(int)
+
+def question_generator(subject, marks, easy, medium, hard):
+
+    marks = int(marks)
 
     if marks <= 0:
         return []
 
-    if subject not in df["subject"].unique():
+    if not subject:
         return []
 
-    filtered_df = df[df["subject"] == subject]
-    questions_list = list(filtered_df.itertuples())
+    # Fetch all questions for this topic from the DB
+    with engine.begin() as connection:
+        rows = connection.execute(text("""
+            SELECT
+                question_bank_question_id,
+                question_bank_question_text,
+                question_bank_question_marks,
+                question_bank_question_difficulty,
+                question_bank_question_type,
+                question_bank_question_topic
+            FROM lms_demo_db.question_bank_questions
+            WHERE question_bank_question_topic = :subject
+            AND question_bank_question_is_deleted = 0
+        """), {"subject": subject}).mappings().all()
+
+    questions_list = [dict(q) for q in rows]
+
+    if not questions_list:
+        return []
+
     random.shuffle(questions_list)
 
-    total_available = sum(q.marks for q in questions_list)            
-    if marks > total_available:                                        
-        return [{"question_id": q.question_id, "question_text": q.question_text, "marks": q.marks, "difficulty": q.difficulty, "options": q.options, "correct_answer": q.correct_answer, "explanation": q.explanation} for q in questions_list]  # Added
+    total_available = sum(q["question_bank_question_marks"] for q in questions_list)
 
+    # If we can't reach the target, just return everything we have
+    if marks > total_available:
+        return questions_list
+
+    # Subset-sum: find questions that add up exactly to `marks`
     def find_exact(questions, target, index=0):
-
         if target == 0:
-            return []                                                
+            return []
         if target < 0 or index >= len(questions):
-            return None                                                 
+            return None
 
         q = questions[index]
 
-        with_q = find_exact(questions, target - q.marks, index + 1)
+        with_q = find_exact(questions, target - q["question_bank_question_marks"], index + 1)
         if with_q is not None:
             return [q] + with_q
-        
-        without_q = find_exact(questions, target, index + 1)
-        return without_q
+
+        return find_exact(questions, target, index + 1)
 
     result = find_exact(questions_list, marks)
 
     if result is None:
-        return []                                                            
+        return []
 
-    return [
-        {
-            "question_id": q.question_id,
-            "question_text": q.question_text,
-            "marks": q.marks,
-            "difficulty": q.difficulty,
-            "options": q.options,
-            "correct_answer": q.correct_answer,
-            "explanation": q.explanation
-        }
-        for q in result
-    ]
+    return result

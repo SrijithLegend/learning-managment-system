@@ -6,112 +6,209 @@ from fastapi import Form
 from prediction import calculate_difficulty, calculate_topic
 from generator import question_generator
 from datetime import datetime
-
-
-class Question(BaseModel):
-    question_id: int
-    question_text: str
-    subject: str
-    topic: str
-    question_type: str
-    difficulty: str
-    marks: int
-    options: str
-    correct_answer: str
-    explanation: str
+from sqlalchemy import create_engine, text, select, Integer
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
+df = pd.read_excel("question_bank_questions.xlsx")
+df.columns = df.columns.str.strip().str.lower()
 
-def load_data():
-    df = pd.read_excel("question_bank_questions.xlsx")
-    df.columns = df.columns.str.strip()
-    return df
-
+DATABASE_URL = "mysql+pymysql://db_local_user:yD94Q34eI@192.168.1.88:3306/lms_demo_db"
+engine = create_engine(DATABASE_URL)
 
 def analyze_questions():
-    df = load_data()
-    duplicate_count = int(df.duplicated(subset=["question_text"]).sum())
+    with engine.connect() as connection:
+        duplicate_count = connection.execute(text("SELECT COUNT(*) FROM (SELECT question_bank_question_text FROM question_bank_questions GROUP BY question_bank_question_text HAVING COUNT(*) > 1) AS t")).scalar() or 0
+
+        if duplicate_count > 0:
+            delete_query = text("""
+                SET SQL_SAFE_UPDATES = 0;
+                UPDATE lms_demo_db.exam_submission_questions esq
+                JOIN lms_demo_db.question_bank_questions q 
+                    ON esq.question_id = q.question_bank_question_id
+                JOIN (
+                    SELECT MIN(question_bank_question_id) AS keep_id, question_bank_question_text
+                    FROM lms_demo_db.question_bank_questions
+                    GROUP BY question_bank_question_text
+                ) AS keeper 
+                    ON q.question_bank_question_text = keeper.question_bank_question_text
+                SET esq.question_id = keeper.keep_id
+                WHERE esq.question_id != keeper.keep_id;
+                
+                DELETE FROM lms_demo_db.question_bank_questions
+                WHERE question_bank_question_id NOT IN (
+                    SELECT id FROM (
+                        SELECT MIN(question_bank_question_id) AS id
+                        FROM lms_demo_db.question_bank_questions
+                        GROUP BY question_bank_question_text
+                    ) AS temp
+                );
+                SET SQL_SAFE_UPDATES = 1;
+            """)
+            connection.execute(delete_query)
+            connection.commit()
+
+        total_questions = connection.execute(text("SELECT COUNT(*) FROM question_bank_questions")).scalar() or 0
+        topic_res = connection.execute(text("SELECT question_bank_question_topic, COUNT(*) AS question_count FROM question_bank_questions GROUP BY question_bank_question_topic")).mappings().all()
+        difficulty_res = connection.execute(text("SELECT question_bank_question_difficulty, COUNT(*) AS question_count FROM question_bank_questions GROUP BY question_bank_question_difficulty")).mappings().all()
+        type_res = connection.execute(text("SELECT question_bank_question_type, COUNT(*) AS question_count FROM question_bank_questions GROUP BY question_bank_question_type")).mappings().all()
+        total_marks = connection.execute(text("SELECT SUM(question_bank_question_marks) FROM question_bank_questions")).scalar() or 0
+        missing_values = connection.execute(text("SELECT COUNT(*) FROM question_bank_questions WHERE question_bank_question_text IS NULL")).scalar() or 0
+        
+        return {
+            "total_questions": total_questions,
+            "questions_by_topic": [dict(row) for row in topic_res],
+            "questions_by_difficulty": [dict(row) for row in difficulty_res],
+            "questions_by_type": [dict(row) for row in type_res],
+            "total_marks": total_marks,
+            "missing_values": missing_values,
+            "duplicate_questions": duplicate_count,
+        }
     
-    if duplicate_count > 0:
-        df = df.drop_duplicates(subset=["question_text"], keep='first')
-        df.to_excel("question_bank_questions.xlsx", index=False)
-
-    return {
-        "total_questions": len(df),
-        "questions_by_subject": df["subject"].value_counts().to_dict(),
-        "questions_by_topic": df["topic"].value_counts().to_dict(),
-        "questions_by_difficulty": df["difficulty"].value_counts().to_dict(),
-        "questions_by_type": df["question_type"].value_counts().to_dict(),
-        "total_marks": int(df["marks"].sum()),
-        "missing_values": df.isnull().sum().to_dict(),
-
-        "duplicate_questions": int(df.duplicated(subset=["question_text"]).sum())
-    }
-
-
-@app.get("/",include_in_schema=True)
+@app.get("/", include_in_schema=True)
 async def get_summary(request: Request):
     summary = analyze_questions()
     return templates.TemplateResponse(request, 'summary.html', {"data": summary})
 
-
 @app.get("/questions", include_in_schema=True)
 async def get_questions(request: Request):
-
-    
-    df = load_data()
-    selected_df = df[['question_id', 'question_text']]
-    questions = selected_df.to_dict(orient="records")
-    
+    with engine.connect() as connection:
+        questions = connection.execute(text("SELECT question_bank_question_id, question_bank_question_text FROM lms_demo_db.question_bank_questions")).mappings().all()
     return templates.TemplateResponse(request, 'questions.html', {"data": questions})
-
 
 @app.get("/add_question")
 async def show_add_question_form(request: Request):
-    return templates.TemplateResponse(request,
-        "add_question.html"
-    )
-
+    return templates.TemplateResponse(request, "add_question.html")
 
 @app.post("/add_question")
 async def add_question(
     request: Request,
-    question_id: int = Form(...),
-    question_text: str = Form(...),
-    subject: str = Form(...),
-    topic: str = Form(...),
-    question_type: str = Form(...),
-    difficulty: str = Form(...),
-    marks: int = Form(...),
-    options: str = Form(""),
-    correct_answer: str = Form(...),
-    explanation: str = Form("")
+    question_bank_id: int = Form(...),
+    question_bank_question_id: int = Form(...),
+    tenant_id: int = Form(...), 
+    question_bank_question_topic: str = Form(...), 
+    question_bank_question_type: str = Form(...),
+    question_bank_question_text: str = Form(...), 
+    question_bank_question_paragraph_text: str | None = Form(None), 
+    question_bank_question_difficulty: str = Form(...),
+    question_bank_question_marks: float = Form(...), 
+    question_bank_question_negative_marks: float = Form(...), 
+    question_bank_question_hint_text: str | None = Form(None), 
+    question_bank_question_explanation_text: str | None = Form(None), 
+    question_bank_question_order: str | None = Form(None), 
+    question_bank_question_parent_id: str | None = Form(None), 
+    question_bank_question_is_active: int = Form(...), 
+    question_bank_question_is_deleted: int = Form(...), 
+    question_bank_question_created_at: datetime = Form(...), 
+    question_bank_question_created_by: int = Form(...),
+    question_bank_question_updated_at: datetime = Form(...),
+    question_bank_question_updated_by: int = Form(...),
+    question_bank_question_audio_url: str | None = Form(None),
+    audio_file_url: str | None = Form(None)
 ):
-    df = load_data()
+    with engine.begin() as connection:
+        question_text_validity = connection.execute(
+            text("""
+                SELECT question_bank_question_text
+                FROM lms_demo_db.question_bank_questions
+                WHERE question_bank_question_text = :question_text
+                AND question_bank_question_is_deleted = 0;
+            """),
+            {"question_text": question_bank_question_text}
+        ).fetchone()
 
-    if question_id in df["question_id"].values:
-        return {"error": "Question ID already exists."}
+        if question_text_validity:
+            return {"error": "Question text already exists."}
 
-    if question_text in df["question_text"].values:
-        return {"error": "Question text already exists."}
+        try:
+            order_val = int(question_bank_question_order) if question_bank_question_order and question_bank_question_order != "null" else None
+        except ValueError:
+            order_val = None
 
-    new_question = {
-        "question_id": question_id,
-        "question_text": question_text,
-        "subject": subject,
-        "topic": topic,
-        "question_type": question_type,
-        "difficulty": difficulty,
-        "marks": marks,
-        "options": options,
-        "correct_answer": correct_answer,
-        "explanation": explanation
-    }
+        try:
+            parent_val = int(question_bank_question_parent_id) if question_bank_question_parent_id and question_bank_question_parent_id != "null" else None
+        except ValueError:
+            parent_val = None
 
-    df = pd.concat([df, pd.DataFrame([new_question])], ignore_index=True)
-    df.to_excel("question_bank_questions.xlsx", index=False)
+        new_question = {
+            'question_bank_id': question_bank_id,
+            'question_bank_question_id': question_bank_question_id,
+            'tenant_id': tenant_id,
+            'question_bank_question_topic': question_bank_question_topic,
+            'question_bank_question_type': question_bank_question_type,
+            'question_bank_question_text': question_bank_question_text,
+            'question_bank_question_paragraph_text': question_bank_question_paragraph_text if question_bank_question_paragraph_text and question_bank_question_paragraph_text != "null" else None,
+            'question_bank_question_difficulty': question_bank_question_difficulty,
+            'question_bank_question_marks': question_bank_question_marks,
+            'question_bank_question_negative_marks': question_bank_question_negative_marks,
+            'question_bank_question_hint_text': question_bank_question_hint_text if question_bank_question_hint_text and question_bank_question_hint_text != "null" else None,
+            'question_bank_question_explanation_text': question_bank_question_explanation_text if question_bank_question_explanation_text and question_bank_question_explanation_text != "null" else None,
+            'question_bank_question_order': order_val,
+            'question_bank_question_parent_id': parent_val,
+            'question_bank_question_is_active': question_bank_question_is_active,
+            'question_bank_question_is_deleted': question_bank_question_is_deleted,
+            'question_bank_question_created_at': question_bank_question_created_at,
+            'question_bank_question_created_by': question_bank_question_created_by,
+            'question_bank_question_updated_at': question_bank_question_updated_at,
+            'question_bank_question_updated_by': question_bank_question_updated_by,
+            'question_bank_question_audio_url': question_bank_question_audio_url if question_bank_question_audio_url and question_bank_question_audio_url != "null" else None,
+            'audio_file_url': audio_file_url if audio_file_url and audio_file_url != "null" else None
+        }
+        
+        connection.execute(
+            text("""
+                INSERT INTO lms_demo_db.question_bank_questions (
+                    question_bank_id,
+                    tenant_id,
+                    question_bank_question_id,
+                    question_bank_question_topic,
+                    question_bank_question_type,
+                    question_bank_question_text,
+                    question_bank_question_paragraph_text,
+                    question_bank_question_difficulty,
+                    question_bank_question_marks,
+                    question_bank_question_negative_marks,
+                    question_bank_question_hint_text,
+                    question_bank_question_explanation_text,
+                    question_bank_question_order,
+                    question_bank_question_parent_id,
+                    question_bank_question_is_active,
+                    question_bank_question_is_deleted,
+                    question_bank_question_created_at,
+                    question_bank_question_created_by,
+                    question_bank_question_updated_at,
+                    question_bank_question_updated_by,
+                    question_bank_question_audio_url,
+                    audio_file_url
+                )
+                VALUES (
+                    :question_bank_id,
+                    :tenant_id,
+                    :question_bank_question_id,
+                    :question_bank_question_topic,
+                    :question_bank_question_type,
+                    :question_bank_question_text,
+                    :question_bank_question_paragraph_text,
+                    :question_bank_question_difficulty,
+                    :question_bank_question_marks,
+                    :question_bank_question_negative_marks,
+                    :question_bank_question_hint_text,
+                    :question_bank_question_explanation_text,
+                    :question_bank_question_order,
+                    :question_bank_question_parent_id,
+                    :question_bank_question_is_active,
+                    :question_bank_question_is_deleted,
+                    :question_bank_question_created_at,
+                    :question_bank_question_created_by,
+                    :question_bank_question_updated_at,
+                    :question_bank_question_updated_by,
+                    :question_bank_question_audio_url,
+                    :audio_file_url
+                )
+            """),
+            new_question
+        )
 
     return {"message": "Question added successfully"}
 
@@ -126,38 +223,111 @@ async def show_update_question_form(request: Request):
 @app.post("/update_question")
 async def update_question(
     request: Request,
-    question_id: int = Form(...),
-    question_text: str = Form(...),
-    subject: str = Form(...),
-    topic: str = Form(...),
-    question_type: str = Form(...),
-    difficulty: str = Form(...),
-    marks: int = Form(...),
-    options: str = Form(""),
-    correct_answer: str = Form(...),
-    explanation: str = Form("")
+    question_bank_id: int = Form(...),
+    question_bank_question_id: int = Form(...),
+    tenant_id: int = Form(...), 
+    question_bank_question_topic: str = Form(...), 
+    question_bank_question_type: str = Form(...),
+    question_bank_question_text: str = Form(...), 
+    question_bank_question_paragraph_text: str | None = Form(None), 
+    question_bank_question_difficulty: str = Form(...),
+    question_bank_question_marks: float = Form(...), 
+    question_bank_question_negative_marks: float = Form(...), 
+    question_bank_question_hint_text: str | None = Form(None), 
+    question_bank_question_explanation_text: str | None = Form(None), 
+    question_bank_question_order: str | None = Form(None), 
+    question_bank_question_parent_id: str | None = Form(None), 
+    question_bank_question_is_active: int = Form(...), 
+    question_bank_question_is_deleted: int = Form(...), 
+    question_bank_question_created_at: datetime = Form(...), 
+    question_bank_question_created_by: int = Form(...),
+    question_bank_question_updated_at: datetime = Form(...),
+    question_bank_question_updated_by: int = Form(...),
+    question_bank_question_audio_url: str | None = Form(None),
+    audio_file_url: str | None = Form(None)
 ):
+    
+    with engine.begin() as connection:
+        question_id_validity = connection.execute(
+            text("""
+                SELECT question_bank_question_id
+                FROM lms_demo_db.question_bank_questions
+                WHERE question_bank_question_id = :question_id
+                AND question_bank_question_is_deleted = 0
+            """),
+            {"question_id": question_bank_question_id}
+        ).fetchone()
 
-    df = load_data()
+        if not question_id_validity:
+            return {"error": "Question id doesn't exist."}
 
-    if question_id not in df["question_id"].values:
-        return {"error": "Question ID not found."}
+        try:
+            order_val = int(question_bank_question_order) if question_bank_question_order and question_bank_question_order != "null" else None
+        except ValueError:
+            order_val = None
 
-    idx = df.index[df["question_id"] == question_id][0]
+        try:
+            parent_val = int(question_bank_question_parent_id) if question_bank_question_parent_id and question_bank_question_parent_id != "null" else None
+        except ValueError:
+            parent_val = None
 
-    df.at[idx, "question_text"] = question_text
-    df.at[idx, "subject"] = subject
-    df.at[idx, "topic"] = topic
-    df.at[idx, "question_type"] = question_type
-    df.at[idx, "difficulty"] = difficulty
-    df.at[idx, "marks"] = marks
-    df.at[idx, "options"] = options
-    df.at[idx, "correct_answer"] = correct_answer
-    df.at[idx, "explanation"] = explanation
-
-    df.to_excel("question_bank_questions.xlsx", index=False)
+        update_question = {
+            'question_bank_id': question_bank_id,
+            'question_bank_question_id': question_bank_question_id,
+            'tenant_id': tenant_id,
+            'question_bank_question_topic': question_bank_question_topic,
+            'question_bank_question_type': question_bank_question_type,
+            'question_bank_question_text': question_bank_question_text,
+            'question_bank_question_paragraph_text': question_bank_question_paragraph_text if question_bank_question_paragraph_text and question_bank_question_paragraph_text != "null" else None,
+            'question_bank_question_difficulty': question_bank_question_difficulty,
+            'question_bank_question_marks': question_bank_question_marks,
+            'question_bank_question_negative_marks': question_bank_question_negative_marks,
+            'question_bank_question_hint_text': question_bank_question_hint_text if question_bank_question_hint_text and question_bank_question_hint_text != "null" else None,
+            'question_bank_question_explanation_text': question_bank_question_explanation_text if question_bank_question_explanation_text and question_bank_question_explanation_text != "null" else None,
+            'question_bank_question_order': order_val,
+            'question_bank_question_parent_id': parent_val,
+            'question_bank_question_is_active': question_bank_question_is_active,
+            'question_bank_question_is_deleted': question_bank_question_is_deleted,
+            'question_bank_question_created_at': question_bank_question_created_at,
+            'question_bank_question_created_by': question_bank_question_created_by,
+            'question_bank_question_updated_at': question_bank_question_updated_at,
+            'question_bank_question_updated_by': question_bank_question_updated_by,
+            'question_bank_question_audio_url': question_bank_question_audio_url if question_bank_question_audio_url and question_bank_question_audio_url != "null" else None,
+            'audio_file_url': audio_file_url if audio_file_url and audio_file_url != "null" else None
+        }
+        
+        connection.execute(
+    text("""
+        UPDATE lms_demo_db.question_bank_questions
+        SET
+            question_bank_id = :question_bank_id,
+            tenant_id = :tenant_id,
+            question_bank_question_topic = :question_bank_question_topic,
+            question_bank_question_type = :question_bank_question_type,
+            question_bank_question_text = :question_bank_question_text,
+            question_bank_question_paragraph_text = :question_bank_question_paragraph_text,
+            question_bank_question_difficulty = :question_bank_question_difficulty,
+            question_bank_question_marks = :question_bank_question_marks,
+            question_bank_question_negative_marks = :question_bank_question_negative_marks,
+            question_bank_question_hint_text = :question_bank_question_hint_text,
+            question_bank_question_explanation_text = :question_bank_question_explanation_text,
+            question_bank_question_order = :question_bank_question_order,
+            question_bank_question_parent_id = :question_bank_question_parent_id,
+            question_bank_question_is_active = :question_bank_question_is_active,
+            question_bank_question_is_deleted = :question_bank_question_is_deleted,
+            question_bank_question_created_at = :question_bank_question_created_at,
+            question_bank_question_created_by = :question_bank_question_created_by,
+            question_bank_question_updated_at = :question_bank_question_updated_at,
+            question_bank_question_updated_by = :question_bank_question_updated_by,
+            question_bank_question_audio_url = :question_bank_question_audio_url,
+            audio_file_url = :audio_file_url
+        WHERE question_bank_question_id = :question_bank_question_id
+    """),
+    update_question
+)
 
     return {"message": "Question updated successfully"}
+
 
 @app.get("/delete_question")
 async def show_delete_question_form(request: Request):
@@ -168,18 +338,24 @@ async def show_delete_question_form(request: Request):
 
 @app.post("/delete_question")
 async def delete_question(
-    request: Request,
-    question_id: int = Form(...)
+    question_bank_question_id: int = Form(...)
 ):
-    df = load_data()
+    with engine.begin() as connection:
+        if not question_bank_question_id:
+            return {"error": "Question ID not found."}
+        
+        delete_question = {
+            'question_bank_question_id': question_bank_question_id
+        }
+        
+        connection.execute(
+        text("""
+            DELETE FROM lms_demo_db.question_bank_questions WHERE question_bank_question_id = :question_bank_question_id;
+        """),
+        delete_question
+    )
 
-    if question_id not in df["question_id"].values:
-        return {"error": "Question ID not found."}
-
-    df = df[df["question_id"] != question_id]
-    df.to_excel("question_bank_questions.xlsx", index=False)
-
-    return {"message": "Question deleted successfully"}
+        return {"message": "Question deleted successfully"}
 
 
 @app.get("/prediction")
@@ -190,112 +366,169 @@ async def show_prediction_form(request: Request):
 @app.post("/prediction")
 async def prediction(
     request: Request,
-    question_text: str = Form(...)
+    question_bank_question_text: str = Form(...)
 ):
-    df = load_data()
 
-    difficulty = calculate_difficulty(question_text)
-    topic = calculate_topic(question_text)
+    difficulty = calculate_difficulty(question_bank_question_text)
+    topic = calculate_topic(question_bank_question_text)
 
     return templates.TemplateResponse(request, "prediction.html", {
         "difficulty": difficulty, 
         "topic": topic,
-        "question_text": question_text
+        "question_text": question_bank_question_text
     })
 
 
 @app.get("/classification", include_in_schema=True)
 async def classification(request: Request):
-    df = load_data()
-    total = len(df)
-    df.columns = df.columns.str.strip().str.lower()
-    
-    diff_count = 0
-    top_count = 0
-    results = []
 
-    questions = df[["question_id", "question_text", "difficulty", "topic"]].to_dict(orient="records")
+    with engine.begin() as connection:
+        total = connection.execute(text("""
+            SELECT COUNT(*)
+            FROM lms_demo_db.question_bank_questions
+            WHERE question_bank_question_is_deleted = 0
+        """)).scalar() or 0
 
-    for q in questions:
-        question_text = str(q["question_text"])
-        pred_diff = calculate_difficulty(question_text)
-        pred_top = calculate_topic(question_text)
+        diff_count = 0
+        top_count = 0
+        results = []
 
-        results.append({
-            **q, 
-            "predicted_topic": pred_top, 
-            "predicted_difficulty": pred_diff
-        })
+        questions = connection.execute(text("""
+            SELECT 
+                question_bank_question_id,
+                question_bank_question_text,
+                question_bank_question_difficulty,
+                question_bank_question_topic
+            FROM lms_demo_db.question_bank_questions
+            WHERE question_bank_question_is_deleted = 0
+        """)).mappings().all()
 
-        if str(pred_diff).strip().lower() == str(q["difficulty"]).strip().lower():
-            diff_count += 1
-        if str(pred_top).strip().lower() == str(q["topic"]).strip().lower():
-            top_count += 1
+        for q in questions:
+            question_text = q["question_bank_question_text"]
+            pred_diff = calculate_difficulty(question_text)
+            pred_top = calculate_topic(question_text)
+
+            results.append({
+                **q,
+                "predicted_topic": pred_top,
+                "predicted_difficulty": pred_diff
+            })
+
+            if str(pred_diff).strip().lower() == str(q["question_bank_question_difficulty"]).strip().lower():
+                diff_count += 1
+
+            if str(pred_top).strip().lower() == str(q["question_bank_question_topic"]).strip().lower():
+                top_count += 1
 
     difficulty_accuracy = round((diff_count / total) * 100, 2) if total > 0 else 0
     topic_accuracy = round((top_count / total) * 100, 2) if total > 0 else 0
 
-    return templates.TemplateResponse(request, "classification.html", {
-        "data": results,
-        "total_questions": total,
-        "difficulty_accuracy": difficulty_accuracy,
-        "topic_accuracy": topic_accuracy
-    })
+    return templates.TemplateResponse(request, "classification.html", 
+        {"data": results, 
+         "total_questions": total, 
+         "difficulty_accuracy": difficulty_accuracy, 
+         "topic_accuracy": topic_accuracy
+        })
 
 
-@app.get('/generator')
-async def show_generator_form(request: Request, subject: str = None):
-    df = load_data()
-    subjects = df["subject"].unique().tolist()
+@app.get("/generator")
+async def show_generator_form(request: Request):
+    with engine.begin() as connection:
+        topic_rows = connection.execute(text("""
+            SELECT DISTINCT question_bank_question_topic
+            FROM lms_demo_db.question_bank_questions
+            WHERE question_bank_question_is_deleted = 0
+        """)).mappings().all()
 
-    return templates.TemplateResponse(request, "generator.html", {
-        "subjects": subjects,
-        "selected_subject": subject,
+        topics = [
+            row["question_bank_question_topic"]
+            for row in topic_rows
+        ]
+
+    return templates.TemplateResponse(request ,"generator.html", {
+        "topics": topics,
+        "selected_topic": None,
         "questions": None,
     })
 
 
-@app.post('/generator')
+@app.post("/generator")
 async def generator(
     request: Request,
-    marks: int = Form(...),
     subject: str = Form(...),
+    question_bank_question_marks: int = Form(...),
     easy_pct: int = Form(...),
     medium_pct: int = Form(...),
     hard_pct: int = Form(...)
 ):
-    df = load_data()
-    subjects = df["subject"].unique().tolist()                            
-    topics = df[df["subject"] == subject]["topic"].unique().tolist()     
-    
-    if easy_pct + medium_pct + hard_pct == 100:
+    with engine.begin() as connection:
+        topic_rows = connection.execute(text("""
+            SELECT DISTINCT question_bank_question_topic
+            FROM lms_demo_db.question_bank_questions
+            WHERE question_bank_question_is_deleted = 0
+        """)).mappings().all()
 
-        easy = round(marks * easy_pct / 100)
-        medium = round(marks * medium_pct / 100)
-        hard = marks - easy - medium
+        topics = [
+            row["question_bank_question_topic"]
+            for row in topic_rows
+        ]
 
-    else:
-        return 'Invalid percentage values. Please ensure they sum to 100.'
-    
-    questions = question_generator(marks, subject, easy , medium, hard)       
-    
-    return templates.TemplateResponse(request, "generator.html", {
-        "marks": marks,
-        "subject": subject,
-        "subjects": subjects,
-        "selected_subject": subject,
-        "questions": questions,
+    if easy_pct + medium_pct + hard_pct != 100:
+        return templates.TemplateResponse("generator.html", {
+            "request": request,
+            "topics": topics,
+            "selected_topic": subject,
+            "questions": None,
+            "error": "Percentages must sum to 100.",
+            "easy_pct": easy_pct,
+            "medium_pct": medium_pct,
+            "hard_pct": hard_pct,
+            "question_bank_question_marks": question_bank_question_marks,
+        })
+
+    easy = round(question_bank_question_marks * easy_pct / 100)
+    medium = round(question_bank_question_marks * medium_pct / 100)
+    hard = question_bank_question_marks - easy - medium
+
+    questions = question_generator(
+        subject,                   
+        question_bank_question_marks,
+        easy,
+        medium,
+        hard
+    )
+
+    total_marks = sum(q["question_bank_question_marks"] for q in questions) if questions else 0
+
+    return templates.TemplateResponse(request, "generator.html", { 
         "topics": topics,
+        "selected_topic": subject,
+        "questions": questions,
+        "total_marks": total_marks,                     
         "easy": easy,
         "medium": medium,
         "hard": hard,
         "easy_pct": easy_pct,
         "medium_pct": medium_pct,
-        "hard_pct": hard_pct
+        "hard_pct": hard_pct,
+        "question_bank_question_marks": question_bank_question_marks,
     })
 
 @app.get("/get_topics")
-async def get_topics(subject: str):
-    df = load_data()
-    topics = df[df["subject"] == subject]["topic"].unique().tolist()
+async def get_topics():
+    with engine.begin() as connection:
+        topic_rows = connection.execute(text("""
+            SELECT DISTINCT question_bank_question_topic
+            FROM lms_demo_db.question_bank_questions
+            WHERE question_bank_question_is_deleted = 0
+        """)).mappings().all()
+
+        topics = [
+            row["question_bank_question_topic"]
+            for row in topic_rows
+        ]
+
     return {"topics": topics}
+
+
+

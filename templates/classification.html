@@ -92,18 +92,37 @@
             <tbody>
                 {% for q in data %}
                 <tr>
+
                     <td style="font-weight: bold; color: var(--primary);">
-                        #{{ q.question_id[4:] if q.question_id|length > 4 else q.question_id }}
+                        #{{ q.question_bank_question_id }}
                     </td>
-                    <td>{{ q.question_text }}</td>
+
                     <td>
-                        <div style="font-weight: 500;">{{ q.topic }}</div>
-                        <div style="color: var(--success); font-size: 0.85rem;">→ {{ q.predicted_topic }}</div>
+                        {{ q.question_bank_question_text }}
                     </td>
+
                     <td>
-                        <span class="badge badge-actual">{{ q.difficulty }}</span><br>
-                        <span class="badge badge-predicted">{{ q.predicted_difficulty }}</span>
+                        <div style="font-weight: 500;">
+                            {{ q.question_bank_question_topic }}
+                        </div>
+
+                        <div style="color: var(--success); font-size: 0.85rem;">
+                            → {{ q.predicted_topic }}
+                        </div>
                     </td>
+
+                    <td>
+                        <span class="badge badge-actual">
+                            {{ q.question_bank_question_difficulty }}
+                        </span>
+
+                        <br>
+
+                        <span class="badge badge-predicted">
+                            {{ q.predicted_difficulty }}
+                        </span>
+                    </td>
+
                 </tr>
                 {% endfor %}
             </tbody>

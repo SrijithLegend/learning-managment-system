@@ -22,49 +22,165 @@
 
 <form method="POST" action="/update_question">
     <div class="field">
-        <label for="question_id">Question ID</label>
-        <input type="number" id="question_id" name="question_id" required>
+        <label for="tenant_id">Tenant ID</label>
+        <input type="number" id="tenant_id" name="tenant_id" required>
     </div>
+
     <div class="field">
-        <label for="question_text">Question Text</label>
-        <textarea id="question_text" name="question_text" required></textarea>
+        <label for="question_bank_id">Question Bank ID</label>
+        <input type="number" id="question_bank_id" name="question_bank_id" required>
     </div>
+
     <div class="field">
-        <label for="subject">Subject</label>
-        <input type="text" id="subject" name="subject" required>
+        <label for="question_bank_question_id">Question Bank Question ID</label>
+        <input type="number" id="question_bank_question_id" name="question_bank_question_id" required>
     </div>
+
     <div class="field">
-        <label for="topic">Topic</label>
-        <input type="text" id="topic" name="topic" required>
+        <label for="question_bank_question_topic">Topic</label>
+        <input type="text" id="question_bank_question_topic" name="question_bank_question_topic" required>
     </div>
+
     <div class="field">
-        <label for="question_type">Question Type</label>
-        <input type="text" id="question_type" name="question_type" placeholder="MCQ / True-False / etc." required>
+        <label for="question_bank_question_type">Question Type</label>
+        <input type="text"
+               id="question_bank_question_type"
+               name="question_bank_question_type"
+               placeholder="MCQ / True-False / Short Answer"
+               required>
     </div>
+
     <div class="field">
-        <label for="difficulty">Difficulty</label>
-        <select id="difficulty" name="difficulty" required>
+        <label for="question_bank_question_text">Question Text</label>
+        <textarea id="question_bank_question_text"
+                  name="question_bank_question_text"
+                  required></textarea>
+    </div>
+
+    <div class="field">
+        <label for="question_bank_question_paragraph_text">Paragraph Text</label>
+        <textarea id="question_bank_question_paragraph_text"
+                  name="question_bank_question_paragraph_text"></textarea>
+    </div>
+
+    <div class="field">
+        <label for="question_bank_question_difficulty">Difficulty</label>
+        <select id="question_bank_question_difficulty"
+                name="question_bank_question_difficulty"
+                required>
             <option value="">Select difficulty</option>
             <option value="Easy">Easy</option>
             <option value="Medium">Medium</option>
             <option value="Hard">Hard</option>
         </select>
     </div>
+
     <div class="field">
-        <label for="marks">Marks</label>
-        <input type="number" id="marks" name="marks" required>
+        <label for="question_bank_question_marks">Marks</label>
+        <input type="number"
+               step="0.5"
+               id="question_bank_question_marks"
+               name="question_bank_question_marks"
+               required>
     </div>
+
     <div class="field">
-        <label for="options">Options (for MCQ)</label>
-        <input type="text" id="options" name="options" placeholder="A) ... B) ... C) ... D) ...">
+        <label for="question_bank_question_negative_marks">Negative Marks</label>
+        <input type="number"
+               step="0.5"
+               id="question_bank_question_negative_marks"
+               name="question_bank_question_negative_marks"
+               value="0">
     </div>
+
     <div class="field">
-        <label for="correct_answer">Correct Answer</label>
-        <input type="text" id="correct_answer" name="correct_answer" required>
+        <label for="question_bank_question_hint_text">Hint Text</label>
+        <textarea id="question_bank_question_hint_text"
+                  name="question_bank_question_hint_text"></textarea>
     </div>
+
     <div class="field">
-        <label for="explanation">Explanation</label>
-        <textarea id="explanation" name="explanation"></textarea>
+        <label for="question_bank_question_explanation_text">Explanation Text</label>
+        <textarea id="question_bank_question_explanation_text"
+                  name="question_bank_question_explanation_text"></textarea>
+    </div>
+
+    <div class="field">
+        <label for="question_bank_question_order">Question Order</label>
+        <input type="text"
+               id="question_bank_question_order"
+               name="question_bank_question_order">
+    </div>
+
+    <div class="field">
+        <label for="question_bank_question_parent_id">Parent Question ID</label>
+        <input type="text"
+               id="question_bank_question_parent_id"
+               name="question_bank_question_parent_id">
+    </div>
+
+    <div class="field">
+        <label for="question_bank_question_is_active">Is Active</label>
+        <select id="question_bank_question_is_active"
+                name="question_bank_question_is_active">
+            <option value="1">True</option>
+            <option value="0">False</option>
+        </select>
+    </div>
+
+    <div class="field">
+        <label for="question_bank_question_is_deleted">Is Deleted</label>
+        <select id="question_bank_question_is_deleted"
+                name="question_bank_question_is_deleted">
+            <option value="0">False</option>
+            <option value="1">True</option>
+        </select>
+    </div>
+
+    <div class="field">
+        <label for="question_bank_question_created_at">Created At</label>
+        <input type="datetime-local"
+               id="question_bank_question_created_at"
+               name="question_bank_question_created_at"
+               required>
+    </div>
+
+    <div class="field">
+        <label for="question_bank_question_created_by">Created By</label>
+        <input type="number"
+               id="question_bank_question_created_by"
+               name="question_bank_question_created_by"
+               required>
+    </div>
+
+    <div class="field">
+        <label for="question_bank_question_updated_at">Updated At</label>
+        <input type="datetime-local"
+               id="question_bank_question_updated_at"
+               name="question_bank_question_updated_at"
+               required>
+    </div>
+
+    <div class="field">
+        <label for="question_bank_question_updated_by">Updated By</label>
+        <input type="number"
+               id="question_bank_question_updated_by"
+               name="question_bank_question_updated_by"
+               required>
+    </div>
+
+    <div class="field">
+        <label for="question_bank_question_audio_url">Question Audio URL</label>
+        <input type="text"
+               id="question_bank_question_audio_url"
+               name="question_bank_question_audio_url">
+    </div>
+
+    <div class="field">
+        <label for="audio_file_url">Audio File URL</label>
+        <input type="text"
+               id="audio_file_url"
+               name="audio_file_url">
     </div>
     <button type="submit">Update Question</button>
 </form>
