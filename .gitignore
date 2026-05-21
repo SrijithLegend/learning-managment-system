@@ -10,3 +10,4 @@ __pycache__/
 # Ignore Excel/Data files (if you don't want them on GitHub)
 data.xlsx
 *.xlsx
+.env

@@ -7,6 +7,17 @@ from prediction import calculate_difficulty, calculate_topic
 from generator import question_generator
 from datetime import datetime
 from sqlalchemy import create_engine, text, select, Integer
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_NAME = os.getenv("DB_NAME")
+
+DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -14,7 +25,6 @@ templates = Jinja2Templates(directory="templates")
 df = pd.read_excel("question_bank_questions.xlsx")
 df.columns = df.columns.str.strip().str.lower()
 
-DATABASE_URL = "mysql+pymysql://db_local_user:yD94Q34eI@192.168.1.88:3306/lms_demo_db"
 engine = create_engine(DATABASE_URL)
 
 def analyze_questions():
@@ -210,7 +220,11 @@ async def add_question(
             new_question
         )
 
-    return {"message": "Question added successfully"}
+        message = f"Question with ID {question_bank_question_id} added successfully"
+
+    return templates.TemplateResponse(request, "add_question.html", {
+        "message": message
+    })
 
 
 @app.get("/update_question")
@@ -326,7 +340,11 @@ async def update_question(
     update_question
 )
 
-    return {"message": "Question updated successfully"}
+        message = f"Question updated successfully"
+        
+    return templates.TemplateResponse(request, "update_question.html", {
+        "message": message
+    })
 
 
 @app.get("/delete_question")
@@ -337,7 +355,7 @@ async def show_delete_question_form(request: Request):
 
 
 @app.post("/delete_question")
-async def delete_question(
+async def delete_question(request: Request,
     question_bank_question_id: int = Form(...)
 ):
     with engine.begin() as connection:
@@ -354,8 +372,11 @@ async def delete_question(
         """),
         delete_question
     )
+        message = f"Question with ID {question_bank_question_id} deleted successfully"
 
-        return {"message": "Question deleted successfully"}
+        return templates.TemplateResponse(request, "delete_question.html", {
+        "message": message
+    })
 
 
 @app.get("/prediction")
@@ -529,6 +550,5 @@ async def get_topics():
         ]
 
     return {"topics": topics}
-
 
 

@@ -34,6 +34,9 @@
     button:hover {
         background: #1d4ed8;
     }
+    .results { background: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 4px; max-width: 560px; }
+    .res-label { font-weight: bold; color: #2563eb; }
+
 </style>
 {% endblock %}
 
@@ -207,4 +210,13 @@
     <button type="submit">Add Question</button>
 
 </form>
+
+{% if message %}
+<div class="results">
+    <div class="field">
+        <p><span class="res-label">Message:</span> {{ message }}</p>
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}

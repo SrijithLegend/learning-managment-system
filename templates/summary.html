@@ -48,7 +48,7 @@
     <tr><th>Difficulty</th><th>Count</th></tr>
     {% for item in data.questions_by_difficulty %}
     <tr>
-        <td>{{ item[0] }}</td>
+        <td>{{ item.question_bank_question_difficulty }}</td>
         <td>{{ item.question_count }}</td>
     </tr>
     {% endfor %}
@@ -59,7 +59,7 @@
     <tr><th>Type</th><th>Count</th></tr>
     {% for item in data.questions_by_type %}
     <tr>
-        <td>{{ item[0] }}</td>
+        <td>{{ item.question_bank_question_type }}</td>
         <td>{{ item.question_count }}</td>
     </tr>
     {% endfor %}

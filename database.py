@@ -1,11 +1,22 @@
 import pandas as pd
 from datetime import datetime
 from sqlalchemy import create_engine
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_NAME = os.getenv("DB_NAME")
+
+DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+
 
 df = pd.read_excel("question_bank_questions.xlsx")
 df.columns = df.columns.str.strip().str.lower()
 
-DATABASE_URL = "mysql+pymysql://db_local_user:yD94Q34eI@192.168.1.88:3306/lms_demo_db"
 
 engine = create_engine(DATABASE_URL)
 

@@ -1,7 +1,17 @@
 import random
 from sqlalchemy import create_engine, text
+from dotenv import load_dotenv
+import os
 
-DATABASE_URL = "mysql+pymysql://db_local_user:yD94Q34eI@192.168.1.88:3306/lms_demo_db"
+load_dotenv()
+
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_NAME = os.getenv("DB_NAME")
+
+DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+
 engine = create_engine(DATABASE_URL)
 
 
@@ -15,7 +25,6 @@ def question_generator(subject, marks, easy, medium, hard):
     if not subject:
         return []
 
-    # Fetch all questions for this topic from the DB
     with engine.begin() as connection:
         rows = connection.execute(text("""
             SELECT
@@ -39,11 +48,10 @@ def question_generator(subject, marks, easy, medium, hard):
 
     total_available = sum(q["question_bank_question_marks"] for q in questions_list)
 
-    # If we can't reach the target, just return everything we have
+
     if marks > total_available:
         return questions_list
 
-    # Subset-sum: find questions that add up exactly to `marks`
     def find_exact(questions, target, index=0):
         if target == 0:
             return []
