@@ -1,13 +1,18 @@
-# Ignore the virtual environment
+# Virtual Environment
 .venv/
-venv/
-env/
-
-# Ignore Python cache
 __pycache__/
 *.pyc
 
-# Ignore Excel/Data files (if you don't want them on GitHub)
-data.xlsx
+# Local Vector Database & Cache
+my_vector_db/
+.fastembed_cache/
+
+# Local SQL Databases & Backups
+*.db
 *.xlsx
+
+# Machine Learning Model & Vectorizer files
+*.pkl
+
+# Environment variables & Credentials
 .env
