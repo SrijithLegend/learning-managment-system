@@ -9,6 +9,7 @@ from datetime import datetime
 from sqlalchemy import create_engine, text, select, Integer
 from dotenv import load_dotenv
 import os
+from similarity import similarity_checker , sync_database_to_vector_db
 
 load_dotenv()
 
@@ -21,9 +22,6 @@ DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
-
-df = pd.read_excel("question_bank_questions.xlsx")
-df.columns = df.columns.str.strip().str.lower()
 
 engine = create_engine(DATABASE_URL)
 
@@ -117,6 +115,8 @@ async def add_question(
     question_bank_question_audio_url: str | None = Form(None),
     audio_file_url: str | None = Form(None)
 ):
+    similarity_result = similarity_checker(question_bank_question_text)
+    
     with engine.begin() as connection:
         question_text_validity = connection.execute(
             text("""
@@ -130,6 +130,7 @@ async def add_question(
 
         if question_text_validity:
             return {"error": "Question text already exists."}
+        
 
         try:
             order_val = int(question_bank_question_order) if question_bank_question_order and question_bank_question_order != "null" else None
@@ -222,10 +223,14 @@ async def add_question(
 
         message = f"Question with ID {question_bank_question_id} added successfully"
 
-    return templates.TemplateResponse(request, "add_question.html", {
-        "message": message
-    })
+    sync_database_to_vector_db()
 
+    return templates.TemplateResponse(request, "add_question.html", {
+        "message": message,
+        "closest_match": 'No Questions Matched' if similarity_result["similarity"] <= 0 else similarity_result["closest_match"],
+        "distance_score": '0' if similarity_result["similarity"] <= 0 else similarity_result["similarity"],
+        "result": similarity_result["result"]
+    })
 
 @app.get("/update_question")
 async def show_update_question_form(request: Request):
@@ -260,6 +265,7 @@ async def update_question(
     question_bank_question_audio_url: str | None = Form(None),
     audio_file_url: str | None = Form(None)
 ):
+    similarity_result = similarity_checker(question_bank_question_text)
     
     with engine.begin() as connection:
         question_id_validity = connection.execute(
@@ -341,9 +347,12 @@ async def update_question(
 )
 
         message = f"Question updated successfully"
-        
+
+    sync_database_to_vector_db()
     return templates.TemplateResponse(request, "update_question.html", {
-        "message": message
+        "closest_match": 'No Questions Matched' if similarity_result["similarity"] <= 0 else similarity_result["closest_match"],
+        "distance_score": '0' if similarity_result["similarity"] <= 0 else similarity_result["similarity"],
+        "result": similarity_result["result"]
     })
 
 
@@ -389,16 +398,18 @@ async def prediction(
     request: Request,
     question_bank_question_text: str = Form(...)
 ):
-
+    similarity_result = similarity_checker(question_bank_question_text)
     difficulty = calculate_difficulty(question_bank_question_text)
     topic = calculate_topic(question_bank_question_text)
 
     return templates.TemplateResponse(request, "prediction.html", {
         "difficulty": difficulty, 
         "topic": topic,
-        "question_text": question_bank_question_text
+        "question_text": question_bank_question_text,
+        "closest_match": 'No Questions Matched' if similarity_result["similarity"] <= 0 else similarity_result["closest_match"],
+        "distance_score": '0' if similarity_result["similarity"] <= 0 else similarity_result["similarity"],
+        "result": similarity_result["result"]
     })
-
 
 @app.get("/classification", include_in_schema=True)
 async def classification(request: Request):
