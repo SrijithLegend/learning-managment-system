@@ -27,8 +27,18 @@ engine = create_engine(DATABASE_URL)
 
 def analyze_questions():
     with engine.connect() as connection:
-        duplicate_count = connection.execute(text("SELECT COUNT(*) FROM (SELECT question_bank_question_text FROM question_bank_questions GROUP BY question_bank_question_text HAVING COUNT(*) > 1) AS t")).scalar() or 0
 
+        duplicate_count = connection.execute(text("""
+                SELECT COUNT(*) 
+                FROM (
+                    SELECT question_bank_question_text 
+                    FROM question_bank_questions 
+                    WHERE question_bank_question_is_deleted = 0 
+                    GROUP BY question_bank_question_text 
+                    HAVING COUNT(*) > 1
+                ) AS t
+            """)).scalar() or 0
+        
         if duplicate_count > 0:
             delete_query = text("""
                 SET SQL_SAFE_UPDATES = 0;
@@ -52,16 +62,21 @@ def analyze_questions():
                         GROUP BY question_bank_question_text
                     ) AS temp
                 );
-                SET SQL_SAFE_UPDATES = 1;
+                SET SQL_SAFE_UPDATES = 1 WHERE question_bank_question_is_deleted = 0;
             """)
             connection.execute(delete_query)
             connection.commit()
 
-        total_questions = connection.execute(text("SELECT COUNT(*) FROM question_bank_questions")).scalar() or 0
-        topic_res = connection.execute(text("SELECT question_bank_question_topic, COUNT(*) AS question_count FROM question_bank_questions GROUP BY question_bank_question_topic")).mappings().all()
+        total_questions = connection.execute(text("SELECT COUNT(*) FROM question_bank_questions WHERE question_bank_question_is_deleted = 0")).scalar() or 0
+        topic_res = connection.execute(text("""
+                                            SELECT question_bank_question_topic, COUNT(*) AS question_count 
+                                            FROM question_bank_questions 
+                                            WHERE question_bank_question_is_deleted = 0
+                                            GROUP BY question_bank_question_topic
+                                        """)).mappings().all()
         difficulty_res = connection.execute(text("SELECT question_bank_question_difficulty, COUNT(*) AS question_count FROM question_bank_questions GROUP BY question_bank_question_difficulty")).mappings().all()
-        type_res = connection.execute(text("SELECT question_bank_question_type, COUNT(*) AS question_count FROM question_bank_questions GROUP BY question_bank_question_type")).mappings().all()
-        total_marks = connection.execute(text("SELECT SUM(question_bank_question_marks) FROM question_bank_questions")).scalar() or 0
+        type_res = connection.execute(text("SELECT question_bank_question_type, COUNT(*) AS question_count FROM question_bank_questions GROUP BY question_bank_question_type ")).mappings().all()
+        total_marks = connection.execute(text("SELECT SUM(question_bank_question_marks) FROM question_bank_questions ")).scalar() or 0
         missing_values = connection.execute(text("SELECT COUNT(*) FROM question_bank_questions WHERE question_bank_question_text IS NULL")).scalar() or 0
         
         return {
@@ -82,7 +97,7 @@ async def get_summary(request: Request):
 @app.get("/questions", include_in_schema=True)
 async def get_questions(request: Request):
     with engine.connect() as connection:
-        questions = connection.execute(text("SELECT question_bank_question_id, question_bank_question_text FROM lms_demo_db.question_bank_questions")).mappings().all()
+        questions = connection.execute(text("SELECT question_bank_question_id, question_bank_question_text FROM lms_demo_db.question_bank_questions ")).mappings().all()
     return templates.TemplateResponse(request, 'questions.html', {"data": questions})
 
 @app.get("/add_question")
@@ -115,8 +130,18 @@ async def add_question(
     question_bank_question_audio_url: str | None = Form(None),
     audio_file_url: str | None = Form(None)
 ):
-    similarity_result = similarity_checker(question_bank_question_text)
     
+    similarity_result = similarity_checker(question_bank_question_text)
+    if similarity_result["result"] == "Duplicate":
+
+        return templates.TemplateResponse(request, "add_question.html",
+            {
+                "error": "Duplicate question found.",
+                "closest_match": similarity_result["closest_match"],
+                "distance_score": similarity_result["similarity"],
+                "result": similarity_result["result"]
+            }
+        )
     with engine.begin() as connection:
         question_text_validity = connection.execute(
             text("""
@@ -130,6 +155,9 @@ async def add_question(
 
         if question_text_validity:
             return {"error": "Question text already exists."}
+        
+        if similarity_result["result"] == "Duplicate":
+            return {"error": "Duplicate question found."}
         
 
         try:
@@ -341,7 +369,7 @@ async def update_question(
             question_bank_question_updated_by = :question_bank_question_updated_by,
             question_bank_question_audio_url = :question_bank_question_audio_url,
             audio_file_url = :audio_file_url
-        WHERE question_bank_question_id = :question_bank_question_id
+        WHERE question_bank_question_id = :question_bank_question_id AND question_bank_question_is_deleted = 0
     """),
     update_question
 )
@@ -376,11 +404,13 @@ async def delete_question(request: Request,
         }
         
         connection.execute(
-        text("""
-            DELETE FROM lms_demo_db.question_bank_questions WHERE question_bank_question_id = :question_bank_question_id;
-        """),
-        delete_question
-    )
+            text("""
+                UPDATE question_bank_questions
+                SET question_bank_question_is_deleted = 1
+                WHERE question_bank_question_id = :id AND question_bank_question_is_deleted = 0
+            """),
+            {"id": question_bank_question_id}
+        )
         message = f"Question with ID {question_bank_question_id} deleted successfully"
 
         return templates.TemplateResponse(request, "delete_question.html", {
@@ -398,17 +428,12 @@ async def prediction(
     request: Request,
     question_bank_question_text: str = Form(...)
 ):
-    similarity_result = similarity_checker(question_bank_question_text)
     difficulty = calculate_difficulty(question_bank_question_text)
     topic = calculate_topic(question_bank_question_text)
 
     return templates.TemplateResponse(request, "prediction.html", {
         "difficulty": difficulty, 
         "topic": topic,
-        "question_text": question_bank_question_text,
-        "closest_match": 'No Questions Matched' if similarity_result["similarity"] <= 0 else similarity_result["closest_match"],
-        "distance_score": '0' if similarity_result["similarity"] <= 0 else similarity_result["similarity"],
-        "result": similarity_result["result"]
     })
 
 @app.get("/classification", include_in_schema=True)
@@ -563,3 +588,21 @@ async def get_topics():
     return {"topics": topics}
 
 
+@app.get("/question_quality_check")
+async def show_question_quality_check_form(request: Request):
+    return templates.TemplateResponse(request, "question_quality_check.html")
+
+
+@app.post("/question_quality_check")
+async def question_quality_check(
+    request: Request,
+    question_bank_question_text: str = Form(...)
+):
+    similarity_result = similarity_checker(question_bank_question_text)
+
+    return templates.TemplateResponse(request, "question_quality_check.html", {
+        "question_text": question_bank_question_text,
+        "closest_match": 'No Questions Matched' if similarity_result["similarity"] <= 0 else similarity_result["closest_match"],
+        "distance_score": '0' if similarity_result["similarity"] <= 0 else similarity_result["similarity"],
+        "result": similarity_result["result"]
+    })

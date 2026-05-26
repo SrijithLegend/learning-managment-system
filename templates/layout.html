@@ -3,22 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LMS</title>
+    <title>LMS Dashboard</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: sans-serif; background: #f5f5f5; color: #222; padding: 2rem; }
-        .container { max-width: 860px; margin: 0 auto; }
-        h1 { font-size: 1.5rem; margin-bottom: 1.5rem; }
-        h2 { font-size: 1.1rem; margin: 1.5rem 0 0.75rem; }
-        a { color: #2563eb; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        nav { margin-bottom: 2rem; display: flex; gap: 1.5rem; border-bottom: 1px solid #ddd; padding-bottom: 0.75rem; }
+        /* Modern Reset & Base Setup */
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+        }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #f8fafc; 
+            color: #1e293b; 
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        /* Spacious layout canvas container */
+        .container { 
+            max-width: 1140px; 
+            margin: 0 auto; 
+            padding: 2.5rem 1.5rem;
+        }
+
+        /* Premium Minimal Navbar Layout */
+        nav { 
+            margin-bottom: 2.5rem; 
+            display: flex; 
+            flex-wrap: wrap;
+            gap: 0.5rem; 
+            background: #ffffff;
+            padding: 0.5rem;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        /* Nav link items configured like a web app header */
+        nav a { 
+            color: #64748b; 
+            text-decoration: none; 
+            font-size: 0.925rem;
+            font-weight: 500;
+            padding: 0.6rem 1rem;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        nav a:hover { 
+            color: #2563eb;
+            background-color: #eff6ff;
+            text-decoration: none; 
+        }
+
+        /* Highlights active link depending on current page URL */
+        nav a.active {
+            color: #2563eb;
+            background-color: #eff6ff;
+            font-weight: 600;
+        }
+
+        /* Global Header Hierarchy Settings */
+        h1 { 
+            font-size: 1.85rem; 
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 1.5rem; 
+            letter-spacing: -0.025em;
+        }
+
+        h2 { 
+            font-size: 1.25rem; 
+            font-weight: 600;
+            color: #334155;
+            margin: 2rem 0 1rem; 
+        }
     </style>
     {% block head %}{% endblock %}
 </head>
 <body>
     <div class="container">
-        <nav>
+        <nav id="main-nav">
             <a href="/">Summary</a>
             <a href="/questions">All Questions</a>
             <a href="/add_question">Add Question</a>
@@ -27,8 +93,25 @@
             <a href="/prediction">Prediction</a>
             <a href="/classification">Classification</a>
             <a href="/generator">Question Generator</a>
+            <a href="/question_quality_check">Question Quality Checker</a>
         </nav>
-        {% block content %}{% endblock %}
+        
+        <main>
+            {% block content %}{% endblock %}
+        </main>
     </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll("#main-nav a");
+            
+            navLinks.forEach(link => {
+                if (link.getAttribute("href") === currentPath) {
+                    link.classList.add("active");
+                }
+            });
+        });
+    </script>
 </body>
 </html>
