@@ -32,7 +32,7 @@ def calculate_topic(question_text):
 
 
 
-question = "What is machine learning?"
+question = ""
 
 difficulty = calculate_difficulty(question)
 
